@@ -19,7 +19,7 @@ Philosophy
 Most JSON parsers offer you a bunch of functions to load JSON data, parse it
 and extract any value by its name. jsmn proves that checking the correctness of
 every JSON packet or allocating temporary objects to store parsed JSON fields
-often is an overkill. 
+often is an overkill.
 
 JSON format itself is extremely simple, so why should we complicate it?
 
@@ -106,6 +106,31 @@ from multiple C files, to avoid duplication of symbols you may define  `JSMN_HEA
 #include "jsmn.h"
 ```
 
+A maximum depth of JSMN_MAX_FAST_DEPTH (default 64) is accelerated.
+
+If you want to dynamically determine `max_depth` and allocate `toksupers`
+(unsigned int array of max_depth):
+
+```
+#include "jsmn.h"
+
+...
+jsmn_parser p;
+jsmntok_t t[128]; /* We expect no more than 128 JSON tokens */
+unsigned int max_depth;
+unsigned int *toksupers;
+
+jsmn_init(&p);
+// "s" is the char array holding the json content
+r = jsmn_parse_fast(&p, s, strlen(s), NULL, 128, &max_depth, NULL);
+toksupers = (unsigned int*)malloc(max_depth, sizeof(unsigned int));
+r = jsmn_parse_fast(&p, s, strlen(s), t, 128, &max_depth, toksupers);
+```
+
+`max_depth` must contain at most the length of `toksupers` and will be overwritten
+with the encountered maximum nesting depth.
+Or you can first set `t` and `toksupers` to NULL to determine max_depth.
+
 API
 ---
 
@@ -123,7 +148,7 @@ Token types are described by `jsmntype_t`:
 numbers, booleans and null, because one can easily tell the type using the
 first character:
 
-* <code>'t', 'f'</code> - boolean 
+* <code>'t', 'f'</code> - boolean
 * <code>'n'</code> - null
 * <code>'-', '0'..'9'</code> - number
 
@@ -137,7 +162,7 @@ Token is an object of `jsmntok_t` type:
 	} jsmntok_t;
 
 **Note:** string tokens point to the first character after
-the opening quote and the previous symbol before final quote. This was made 
+the opening quote and the previous symbol before final quote. This was made
 to simplify string extraction from JSON data.
 
 All job is done by `jsmn_parser` object. You can initialize a new parser using:
